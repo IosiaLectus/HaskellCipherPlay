@@ -1,5 +1,8 @@
 import Data.Char (ord, chr)
 
+-- | Check if two integers are relatively prime
+relPrime x y = gcd x y == 1
+
 -- | charshift takes an ASCII character c and shifts it down the ASCII table by an integer x number of steps.
 charshift x c = chr (mod (x + (ord c)) 128)
 
@@ -11,12 +14,13 @@ unshift x s = shift (-x) s
 
 -- | Find the mod m inverse of an integer x. Throws an error when x is not a unit mod m (i.e. when x is nilpotent).
 modInverse x m 
-	| mod m x == 0 = error "error: not a unit"
-	| otherwise = fst (head (filter (\x -> (snd x) == 1) (zip [1..m] (map ((flip mod) m) (map (*x) [1..m])))))
+	| not (relPrime x m) = error "error: not a unit"
+	| otherwise = (fst.head.(filter p).(zip [1..m]).(map ((flip mod m).(*x)))) [1..m]
+	where p =  (\x -> (snd x) == 1)
 
 -- | A single character multiplication cipher on ASCII characters. Throws an error when x is not a unit mod 128.
 charMult x c
-	| mod 128 x == 0 = error "error: not a unit mod 128"
+	| not (relPrime 128 x) = error "error: not a unit mod 128"
 	| otherwise = chr (mod (x * (ord c)) 128)
 
 -- | Implement a single character affine cipher on ASCII characters.
