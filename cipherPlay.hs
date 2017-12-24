@@ -40,3 +40,8 @@ polyAffine a b s = zipWith ($) (zipWith charAffine (cycle a) (cycle b)) s
 
 -- | Inverse of polyAffine
 reversePolyAffine a b s = zipWith ($) (zipWith reverseCharAffine (cycle a) (cycle b)) s
+
+-- | An implementation of the Blum Blum Shub cryptographic pseudo-random number generator. 
+blumBlumShub x n k
+	| k == 0 = mod (mod (x^2) n) 2
+	| otherwise = blumBlumShub (x^2) n (k-1)
