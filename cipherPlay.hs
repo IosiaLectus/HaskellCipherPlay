@@ -56,8 +56,8 @@ reversePolyAffine a b s = zipWith ($) (zipWith reverseCharAffine (cycle a) (cycl
 -- | An implementation of the Blum Blum Shub cryptographic pseudo-random number generator. 
 blumBlumShub :: Int -> Int -> Int -> Int -> ([Int],Int)
 blumBlumShub x p q k
-	| k < 0 = error "last argument must be non-negative"
-	| k == 0 = ((mod y 2):[], y)
+	| k < 1 = error "last argument must be strictly positive"
+	| k == 1 = ((mod y 2):[], y)
 	| otherwise = (((mod y 2):(fst bbs)), (snd bbs))
 	where n = p*q
 	      y = mod (x^2) n
@@ -69,15 +69,32 @@ digitStringToInt base digits
 	| null digits = 0
 	| otherwise = (base * (digitStringToInt base (tail digits))) + (head digits)
 
+-- | given a list, convert it to a list of lists of a given maximum length by grouping consecutive elements together
+deflatten :: Int -> [a] -> [[a]]
+deflatten n lst
+	| n < 1 = error "First argument must be a strictly positive integer"
+	| length lst <= n = [lst]
+	| otherwise = (take n lst):(deflatten n (drop n lst))
+
+-- | Use Blum Blum Shub to generate a list of random ints of some number of binary digits 
+randomIntList :: Int -> Int -> Int -> Int -> Int -> ([Int],Int)
+randomIntList x p q num digits = (ret,y)
+	where bbs = blumBlumShub x p q (num*digits)
+	      lst = deflatten digits (fst bbs)
+	      ret = map (digitStringToInt 2) lst
+	      y = snd bbs
+
 -- | Use Blum Blum Shub to generate a random ASCII string 
 bbsString :: Int -> Int -> Int -> Int -> ([Char],Int)
-bbsString x p q k 
-	| k < 0 = error "last argument must be non-negative"
-	| k == 0 = ((c:""), y)
-	| otherwise = ((c:(fst tpl)),(snd tpl))
-	where bbs = blumBlumShub x p q 6 
-	      c = chr (digitStringToInt 2 (fst bbs))
-	      y = snd bbs
-	      tpl = bbsString y p q (k-1)
+bbsString x p q k = ((map chr (fst tpl)),(snd tpl))
+	where tpl = randomIntList x p q k 7
+
+-- | Use Blum Blum Shub and a random seed to produce a pseudorandom key for a polyalphabetic shift cipher
+bbsPadShift :: Int -> Int -> Int -> [Char] -> [Char]
+bbsPadShift seed p q plaintxt = polyAffine (repeat 1) (fst (randomIntList seed p q (length plaintxt) 7)) plaintxt
+
+-- | Use Blum Blum Shub and a random seed to produce a pseudorandom key for a polyalphabetic shift cipher
+bbsPadUnshift :: Int -> Int -> Int -> [Char] -> [Char]
+bbsPadUnshift seed p q plaintxt = reversePolyAffine (repeat 1) (fst (randomIntList seed p q (length plaintxt) 7)) plaintxt
 
 
