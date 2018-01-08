@@ -54,8 +54,30 @@ reversePolyAffine :: [Int] -> [Int] -> [Char] -> [Char]
 reversePolyAffine a b s = zipWith ($) (zipWith reverseCharAffine (cycle a) (cycle b)) s
 
 -- | An implementation of the Blum Blum Shub cryptographic pseudo-random number generator. 
-blumBlumShub :: Int -> Int -> Int -> Int
-blumBlumShub x n k
-	| k == 0 = mod (x^2) n
-	| otherwise = blumBlumShub (x^2) n (k-1)
+blumBlumShub :: Int -> Int -> Int -> Int -> ([Int],Int)
+blumBlumShub x p q k
+	| k < 0 = error "last argument must be non-negative"
+	| k == 0 = ((mod y 2):[], y)
+	| otherwise = (((mod y 2):(fst bbs)), (snd bbs))
+	where n = p*q
+	      y = mod (x^2) n
+	      bbs = blumBlumShub y p q (k-1)
+
+-- | Convert a list representing the digits of an integer in some base to an Int. Notice that the least signigicant digits should come first.
+digitStringToInt :: Int -> [Int] -> Int
+digitStringToInt base digits
+	| null digits = 0
+	| otherwise = (base * (digitStringToInt base (tail digits))) + (head digits)
+
+-- | Use Blum Blum Shub to generate a random ASCII string 
+bbsString :: Int -> Int -> Int -> Int -> ([Char],Int)
+bbsString x p q k 
+	| k < 0 = error "last argument must be non-negative"
+	| k == 0 = ((c:""), y)
+	| otherwise = ((c:(fst tpl)),(snd tpl))
+	where bbs = blumBlumShub x p q 6 
+	      c = chr (digitStringToInt 2 (fst bbs))
+	      y = snd bbs
+	      tpl = bbsString y p q (k-1)
+
 
