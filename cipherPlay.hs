@@ -1,8 +1,46 @@
 import Data.Char (ord, chr)
 
+
+
+-- | Arithmatic tools
+
+first25Primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97]
+
 -- | Check if two integers are relatively prime
 relPrime :: Int -> Int -> Bool
 relPrime x y = gcd x y == 1
+
+-- | Naive prime test
+isPrime :: Int -> Bool
+isPrime p
+	| p < 2 = False
+	| p < 100 = elem p first25Primes
+	| otherwise = and (map (relPrime p) (filter (< n) (first25Primes ++ [101,103..])))
+	where n = floor (sqrt (fromIntegral p))
+
+-- | Find the mod m inverse of an integer x. Throws an error when x is not a unit mod m (i.e. when x is nilpotent).
+modInverse :: Int -> Int -> Int
+modInverse x m 
+	| not (relPrime x m) = error "error: not a unit"
+	| otherwise = (fst.head.(filter p).(zip [1..m]).(map ((flip mod m).(*x)))) [1..m]
+	where p =  (\x -> (snd x) == 1)
+
+-- | Convert a list representing the digits of an integer in some base to an Int. Notice that the least signigicant digits should come first.
+digitStringToInt :: Int -> [Int] -> Int
+digitStringToInt base digits
+	| null digits = 0
+	| otherwise = (base * (digitStringToInt base (tail digits))) + (head digits)
+
+-- | given a list, convert it to a list of lists of a given maximum length by grouping consecutive elements together
+deflatten :: Int -> [a] -> [[a]]
+deflatten n lst
+	| n < 1 = error "First argument must be a strictly positive integer"
+	| length lst <= n = [lst]
+	| otherwise = (take n lst):(deflatten n (drop n lst))
+
+
+
+-- | Affine ciphers
 
 -- | charshift takes an ASCII character c and shifts it down the ASCII table by an integer x number of steps.
 charshift :: Int -> Char -> Char
@@ -15,13 +53,6 @@ shift x s = map (charshift x) s
 -- | Inverse of shift.
 unshift :: Int -> [Char] -> [Char]
 unshift x s = shift (-x) s
-
--- | Find the mod m inverse of an integer x. Throws an error when x is not a unit mod m (i.e. when x is nilpotent).
-modInverse :: Int -> Int -> Int
-modInverse x m 
-	| not (relPrime x m) = error "error: not a unit"
-	| otherwise = (fst.head.(filter p).(zip [1..m]).(map ((flip mod m).(*x)))) [1..m]
-	where p =  (\x -> (snd x) == 1)
 
 -- | A single character multiplication cipher on ASCII characters. Throws an error when x is not a unit mod 128.
 charMult :: Int -> Char -> Char
@@ -53,6 +84,10 @@ polyAffine a b s = zipWith ($) (zipWith charAffine (cycle a) (cycle b)) s
 reversePolyAffine :: [Int] -> [Int] -> [Char] -> [Char]
 reversePolyAffine a b s = zipWith ($) (zipWith reverseCharAffine (cycle a) (cycle b)) s
 
+
+
+-- | Blum Blum Shub
+
 -- | An implementation of the Blum Blum Shub cryptographic pseudo-random number generator. 
 blumBlumShub :: Int -> Int -> Int -> Int -> ([Int],Int)
 blumBlumShub x p q k
@@ -62,19 +97,6 @@ blumBlumShub x p q k
 	where n = p*q
 	      y = mod (x^2) n
 	      bbs = blumBlumShub y p q (k-1)
-
--- | Convert a list representing the digits of an integer in some base to an Int. Notice that the least signigicant digits should come first.
-digitStringToInt :: Int -> [Int] -> Int
-digitStringToInt base digits
-	| null digits = 0
-	| otherwise = (base * (digitStringToInt base (tail digits))) + (head digits)
-
--- | given a list, convert it to a list of lists of a given maximum length by grouping consecutive elements together
-deflatten :: Int -> [a] -> [[a]]
-deflatten n lst
-	| n < 1 = error "First argument must be a strictly positive integer"
-	| length lst <= n = [lst]
-	| otherwise = (take n lst):(deflatten n (drop n lst))
 
 -- | Use Blum Blum Shub to generate a list of random ints of some number of binary digits 
 randomIntList :: Int -> Int -> Int -> Int -> Int -> ([Int],Int)
