@@ -15,8 +15,23 @@ isPrime :: Int -> Bool
 isPrime p
 	| p < 2 = False
 	| p < 100 = elem p first25Primes
-	| otherwise = and (map (relPrime p) (filter (< n) (first25Primes ++ [101,103..])))
+	| otherwise = and (map (relPrime p) (filter (< n) (first25Primes ++ [101,103..p])))
 	where n = floor (sqrt (fromIntegral p))
+
+-- | Computes x^y mod n
+modExp :: Int -> Int -> Int -> Int
+modExp x y n
+	| y < 0 = error "second argument must be a non-negative integer"
+	| y == 0 = 1
+	| otherwise = mod ((mod x n) * (modExp x (y-1) n)) n
+
+-- | Checks if p is a fermat pseudoprime relative to base a
+fermatPseudoPrime :: Int -> Int -> Bool
+fermatPseudoPrime p a
+	| a < 2 = error "second argument must be greater than 1"
+	| (p-2) < a = error "second argument must be at least two less than first argument"
+	| not (relPrime p a) = False
+	| otherwise = (modExp a (p-1) p) == 1 
 
 -- | Find the mod m inverse of an integer x. Throws an error when x is not a unit mod m (i.e. when x is nilpotent).
 modInverse :: Int -> Int -> Int
@@ -91,6 +106,8 @@ reversePolyAffine a b s = zipWith ($) (zipWith reverseCharAffine (cycle a) (cycl
 -- | An implementation of the Blum Blum Shub cryptographic pseudo-random number generator. 
 blumBlumShub :: Int -> Int -> Int -> Int -> ([Int],Int)
 blumBlumShub x p q k
+	| not ((mod p 4) == 3) = error "second and third arguments must be 3 (mod 4)"
+	| not ((mod q 4) == 3) = error "second and third arguments must be 3 (mod 4)"
 	| k < 1 = error "last argument must be strictly positive"
 	| k == 1 = ((mod y 2):[], y)
 	| otherwise = (((mod y 2):(fst bbs)), (snd bbs))
@@ -118,5 +135,26 @@ bbsPadShift seed p q plaintxt = polyAffine (repeat 1) (fst (randomIntList seed p
 -- | Use Blum Blum Shub and a random seed to produce a pseudorandom key for a polyalphabetic shift cipher
 bbsPadUnshift :: Int -> Int -> Int -> [Char] -> [Char]
 bbsPadUnshift seed p q plaintxt = reversePolyAffine (repeat 1) (fst (randomIntList seed p q (length plaintxt) 7)) plaintxt
+
+
+
+-- | RSA
+
+-- | Given primes p and q, generate an RSA key
+rsaKeyGen :: Int -> Int -> Int -> (Int, Int)
+rsaKeyGen p q e
+	| not (isPrime p) = error "first two arguments must be prime"
+	| not (isPrime q) = error "first two arguments must be prime"
+	| not (relPrime e lam) = error "invalid third argument"
+	| otherwise = (n,d)
+	where n = p * q
+	      lam = lcm (p-1) (q-1)
+	      d = modInverse e lam
+
+-- | encrypt with RSA
+rsaEncrypt :: Int -> Int -> Int -> Int
+rsaEncrypt n e m = modExp m e n
+	      
+
 
 
